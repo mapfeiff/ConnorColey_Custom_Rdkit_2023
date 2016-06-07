@@ -16,6 +16,7 @@
 #include <cstring>
 #include <iostream>
 #include <cassert>
+#include <boost/regex.hpp>
 
 namespace RDKit {
 namespace Canon {
@@ -540,13 +541,27 @@ void rankFragmentAtoms(const ROMol &mol, std::vector<unsigned int> &res,
                        const boost::dynamic_bitset<> &bondsInPlay,
                        const std::vector<std::string> *atomSymbols,
                        bool breakTies, bool includeChirality,
-                       bool includeIsotopes) {
+                       bool includeIsotopes, bool ignoreAtomMapping) {
   PRECONDITION(atomsInPlay.size() == mol.getNumAtoms(), "bad atomsInPlay size");
   PRECONDITION(bondsInPlay.size() == mol.getNumBonds(), "bad bondsInPlay size");
   PRECONDITION(!atomSymbols || atomSymbols->size() == mol.getNumAtoms(),
                "bad atomSymbols size");
 
   std::vector<Canon::canon_atom> atoms(mol.getNumAtoms());
+  std::vector<std::string> atomSymbolsClean;
+  if (ignoreAtomMapping) {
+    boost::regex e("(:[0-9]*])");
+    std::string rep("]");
+    for (unsigned int i = 1; i < mol.getNumAtoms(); i++) {
+      atomSymbolsClean[i].assign(atomSymbols->at(i));
+      boost::regex_replace(atomSymbolsClean[i], e, rep);
+    }
+  } else {
+    for (unsigned int i = 1; i < mol.getNumAtoms(); i++) {
+      atomSymbolsClean[i].assign(atomSymbols->at(i));
+    }
+  }
+
   initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbols);
   for (ROMol::ConstBondIterator bI = mol.beginBonds(); bI != mol.endBonds();
        ++bI) {

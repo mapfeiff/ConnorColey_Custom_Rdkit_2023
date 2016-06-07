@@ -85,6 +85,8 @@ std::string MolToSmiles(const ROMol &mol, bool doIsomericSmiles = false,
   \param allBondsExplicit : if true, symbols will be included for all bonds.
   \param allHsExplicit : if true, hydrogen counts will be provided for every
   atom.
+  \papram ignoreAtomMapping : if true, atom mapping in atomSymbols will be 
+  ignored during canonicalization.
 
   \b NOTE: the bondSymbols are *not* currently used in the canonicalization.
 
@@ -98,6 +100,7 @@ std::string MolFragmentToSmiles(const ROMol &mol,
                                 bool doKekule = false, int rootedAtAtom = -1,
                                 bool canonical = true,
                                 bool allBondsExplicit = false,
-                                bool allHsExplicit = false);
+                                bool allHsExplicit = false,
+                                bool ignoreAtomMapping = false);
 }
 #endif

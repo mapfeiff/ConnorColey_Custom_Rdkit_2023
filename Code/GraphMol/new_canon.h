@@ -713,7 +713,7 @@ void rankFragmentAtoms(const ROMol &mol, std::vector<unsigned int> &res,
                        const boost::dynamic_bitset<> &bondsInPlay,
                        const std::vector<std::string> *atomSymbols = NULL,
                        bool breakTies = true, bool includeChirality = true,
-                       bool includeIsotopes = true);
+                       bool includeIsotopes = true, bool ignoreAtomMapping = false);
 
 void chiralRankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res);
 

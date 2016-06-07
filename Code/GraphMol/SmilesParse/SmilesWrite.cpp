@@ -528,7 +528,8 @@ std::string MolFragmentToSmiles(const ROMol &mol,
                                 const std::vector<std::string> *bondSymbols,
                                 bool doIsomericSmiles, bool doKekule,
                                 int rootedAtAtom, bool canonical,
-                                bool allBondsExplicit, bool allHsExplicit) {
+                                bool allBondsExplicit, bool allHsExplicit,
+                                bool ignoreAtomMapping) {
   PRECONDITION(atomsToUse.size(), "no atoms provided");
   PRECONDITION(rootedAtAtom < 0 ||
                    static_cast<unsigned int>(rootedAtAtom) < mol.getNumAtoms(),
@@ -626,7 +627,7 @@ std::string MolFragmentToSmiles(const ROMol &mol,
   }
   if (canonical) {
     Canon::rankFragmentAtoms(tmol, ranks, atomsInPlay, bondsInPlay, atomSymbols,
-                             true, doIsomericSmiles, doIsomericSmiles);
+                             true, doIsomericSmiles, doIsomericSmiles, ignoreAtomMapping);
     // MolOps::rankAtomsInFragment(tmol,ranks,atomsInPlay,bondsInPlay,atomSymbols,bondSymbols);
   } else {
     for (unsigned int i = 0; i < tmol.getNumAtoms(); ++i) ranks[i] = i;
