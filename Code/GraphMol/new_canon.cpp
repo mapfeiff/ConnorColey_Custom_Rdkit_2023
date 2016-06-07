@@ -16,7 +16,7 @@
 #include <cstring>
 #include <iostream>
 #include <cassert>
-#include <boost/regex.hpp>
+// #include <typeinfo>
 
 namespace RDKit {
 namespace Canon {
@@ -440,6 +440,10 @@ void initFragmentCanonAtoms(const ROMol &mol,
     atoms[i].degree = 0;
     if (atomSymbols) {
       atoms[i].p_symbol = &(*atomSymbols)[i];
+      // std::cerr << "\natom address: \n";
+      // std::cerr << &(*atomSymbols)[i] << "\n";
+      // std::cerr << "\ratom symbol: \n" ;
+      // std::cerr << (*atomSymbols)[i] << "\n";
     } else {
       atoms[i].p_symbol = 0;
     }
@@ -548,21 +552,27 @@ void rankFragmentAtoms(const ROMol &mol, std::vector<unsigned int> &res,
                "bad atomSymbols size");
 
   std::vector<Canon::canon_atom> atoms(mol.getNumAtoms());
-  std::vector<std::string> atomSymbolsClean;
-  if (ignoreAtomMapping) {
-    boost::regex e("(:[0-9]*])");
+  if (ignoreAtomMapping && atomSymbols) {
+    std::vector<std::string> atomSymbolsCleanVec;
+    std::string colon(":");
     std::string rep("]");
-    for (unsigned int i = 1; i < mol.getNumAtoms(); i++) {
-      atomSymbolsClean[i].assign(atomSymbols->at(i));
-      boost::regex_replace(atomSymbolsClean[i], e, rep);
+    for (unsigned int i = 0; i < atomSymbols->size(); i++) {
+      std::string symbol(atomSymbols->at(i));
+      std::size_t found = symbol.find(colon);
+      if (found) {
+        symbol.replace(found, 99, rep);
+      } 
+      atomSymbolsCleanVec.push_back(symbol);
     }
+    std::vector<std::string> *atomSymbolsClean = &atomSymbolsCleanVec;
+    //std::cerr << typeid(atomSymbolsClean).name() << "\n";
+    initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbolsClean);
   } else {
-    for (unsigned int i = 1; i < mol.getNumAtoms(); i++) {
-      atomSymbolsClean[i].assign(atomSymbols->at(i));
-    }
+    //std::cerr << typeid(atomSymbols).name() << "\n";
+    initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbols);
   }
 
-  initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbols);
+  
   for (ROMol::ConstBondIterator bI = mol.beginBonds(); bI != mol.endBonds();
        ++bI) {
     if (!bondsInPlay[(*bI)->getIdx()]) continue;

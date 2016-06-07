@@ -239,7 +239,7 @@ std::string MolFragmentToSmilesHelper(
     const ROMol &mol, python::object atomsToUse, python::object bondsToUse,
     python::object atomSymbols, python::object bondSymbols,
     bool doIsomericSmiles, bool doKekule, int rootedAtAtom, bool canonical,
-    bool allBondsExplicit, bool allHsExplicit) {
+    bool allBondsExplicit, bool allHsExplicit, bool ignoreAtomMapping) {
   rdk_auto_ptr<std::vector<int> > avect =
       pythonObjectToVect(atomsToUse, static_cast<int>(mol.getNumAtoms()));
   if (!avect.get() || !(avect->size())) {
@@ -261,7 +261,7 @@ std::string MolFragmentToSmilesHelper(
   std::string res = MolFragmentToSmiles(
       mol, *avect.get(), bvect.get(), asymbols.get(), bsymbols.get(),
       doIsomericSmiles, doKekule, rootedAtAtom, canonical, allBondsExplicit,
-      allHsExplicit);
+      allHsExplicit, ignoreAtomMapping);
   return res;
 }
 
@@ -723,6 +723,8 @@ BOOST_PYTHON_MODULE(rdmolfiles) {
       in the output SMILES. Defaults to false.\n\
     - allHsExplicit: (optional) if true, all H counts will be explicitly indicated\n\
       in the output SMILES. Defaults to false.\n\
+    - ignoreAtomMapping: (optional) if true, ignores the atom mapping numbers\n\
+      in the canonical ranking algorithm. Defaults to false.\n\
 \n\
   RETURNS:\n\
 \n\
@@ -735,7 +737,7 @@ BOOST_PYTHON_MODULE(rdmolfiles) {
        python::arg("bondSymbols") = 0, python::arg("isomericSmiles") = false,
        python::arg("kekuleSmiles") = false, python::arg("rootedAtAtom") = -1,
        python::arg("canonical") = true, python::arg("allBondsExplicit") = false,
-       python::arg("allHsExplicit") = false),
+       python::arg("allHsExplicit") = false, python::arg("ignoreAtomMapping") = false),
       docString.c_str());
 
   docString =

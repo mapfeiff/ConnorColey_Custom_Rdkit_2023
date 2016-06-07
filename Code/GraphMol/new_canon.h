@@ -280,6 +280,7 @@ class AtomCompareFunctor {
       return 1;
 
     if (dp_atoms[i].p_symbol && dp_atoms[j].p_symbol) {
+      // std::cerr << "\rUsing the following symbol for comparison: " << *(dp_atoms[i].p_symbol) << "\n";
       if (*(dp_atoms[i].p_symbol) < *(dp_atoms[j].p_symbol))
         return -1;
       else if (*(dp_atoms[i].p_symbol) > *(dp_atoms[j].p_symbol))
