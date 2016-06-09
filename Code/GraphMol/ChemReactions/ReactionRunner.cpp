@@ -55,6 +55,8 @@ const std::string WAS_DUMMY =
     "was_dummy";  // was the atom originally a dummy in product
 const std::string OLD_MAPNO =
     "old_mapno";  // the original mapno (mapno gets cleared)
+const std::string OLD_MOLATOMMAPNUMBER = 
+    "old_molAtomMapNumber"; // original molAtomMapNumber
 }
 
 namespace ReactionRunnerUtils {
@@ -168,6 +170,14 @@ void updateImplicitAtomProperties(Atom *prodAtom, const Atom *reactAtom) {
       prodAtom->setNumExplicitHs(reactAtom->getNumExplicitHs());
     }
     prodAtom->setNoImplicit(reactAtom->getNoImplicit());
+  }
+  // CWC CHANGE - PRESERVE MOLATOMMAPNUMBER
+  if (!prodAtom->hasProp(OLD_MOLATOMMAPNUMBER)) {
+    int mapNum;
+    if (reactAtom->getPropIfPresent(common_properties::molAtomMapNumber,
+                                mapNum)) {
+      prodAtom->setProp(OLD_MOLATOMMAPNUMBER, mapNum);
+    }
   }
 }
 
