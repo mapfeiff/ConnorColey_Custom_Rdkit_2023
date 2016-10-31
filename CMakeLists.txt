@@ -182,6 +182,11 @@ else(RDK_BUILD_PYTHON_WRAPPERS)
   find_package(Boost 1.39.0 REQUIRED)
 endif(RDK_BUILD_PYTHON_WRAPPERS)
 
+## BOOST REGEX - ADDED
+#set(T_LIBS ${Boost_LIBRARIES})
+#find_package(Boost 1.54.0 COMPONENTS system filesystem regex REQUIRED)
+#set(Boost_LIBRARIES ${T_LIBS})
+
 if(APPLE)
   # always required
   set(T_LIBS ${Boost_LIBRARIES})
