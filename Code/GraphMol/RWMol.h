@@ -29,7 +29,7 @@ namespace RDKit {
  */
 class RWMol : public ROMol {
  public:
-  RWMol() { d_partialBonds.clear(); }
+  RWMol() : ROMol() { d_partialBonds.clear(); }
 
   //! copy constructor with a twist
   /*!
@@ -41,9 +41,9 @@ class RWMol : public ROMol {
     \param confId if this is >=0, the resulting ROMol will contain only
          the specified conformer from \c other.
   */
-  RWMol(const ROMol &other, bool quickCopy = false, int confId = -1) {
+  RWMol(const ROMol &other, bool quickCopy = false, int confId = -1)
+      : ROMol(other, quickCopy, confId) {
     d_partialBonds.clear();
-    initFromOther(other, quickCopy, confId);
   };
   RWMol &operator=(const RWMol &);
 
@@ -206,6 +206,15 @@ class RWMol : public ROMol {
 
   //! removes a bond from the molecule
   void removeBond(unsigned int beginAtomIdx, unsigned int endAtomIdx);
+
+  //! replaces a particular Bond
+  /*!
+    \param idx          the index of the Bond to replace
+    \param bond         the new bond, which will be copied.
+
+  */
+  void replaceBond(unsigned int idx, Bond *bond);
+
   //@}
 
   //! removes all atoms, bonds, properties, bookmarks, etc.
@@ -216,7 +225,7 @@ class RWMol : public ROMol {
     d_confs.clear();
     dp_props.reset();
     STR_VECT computed;
-    dp_props.setVal(detail::computedPropName, computed);
+    dp_props.setVal(RDKit::detail::computedPropName, computed);
 
     if (dp_ringInfo) dp_ringInfo->reset();
   };

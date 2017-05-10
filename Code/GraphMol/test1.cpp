@@ -161,7 +161,7 @@ void testMolProps() {
   m2.setProp("cprop1", 1, true);
   m2.setProp("cprop2", 2, true);
   STR_VECT cplst;
-  m2.getProp(detail::computedPropName, cplst);
+  m2.getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 2, "");
   CHECK_INVARIANT(cplst[0] == "cprop1", "");
   CHECK_INVARIANT(cplst[1] == "cprop2", "");
@@ -179,12 +179,12 @@ void testMolProps() {
 
   m2.clearProp("cprop1");
   CHECK_INVARIANT(!m2.hasProp("cprop1"), "");
-  m2.getProp(detail::computedPropName, cplst);
+  m2.getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 1, "");
 
   m2.clearComputedProps();
   CHECK_INVARIANT(!m2.hasProp("cprop2"), "");
-  m2.getProp(detail::computedPropName, cplst);
+  m2.getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 0, "");
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -206,7 +206,7 @@ void testClearMol() {
   m2.getProp("prop1", tmpI);
   TEST_ASSERT(tmpI == 2);
 
-  TEST_ASSERT(m2.hasProp(detail::computedPropName));
+  TEST_ASSERT(m2.hasProp(RDKit::detail::computedPropName));
 
   m2.clear();
   TEST_ASSERT(!m2.hasProp("prop1"));
@@ -215,7 +215,8 @@ void testClearMol() {
   TEST_ASSERT(m2.getAtomBookmarks()->empty());
   TEST_ASSERT(m2.getBondBookmarks()->empty());
 
-  TEST_ASSERT(m2.hasProp(detail::computedPropName));  // <- github issue 176
+  TEST_ASSERT(
+      m2.hasProp(RDKit::detail::computedPropName));  // <- github issue 176
   TEST_ASSERT(m2.getPropList().size() == 1);
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -287,19 +288,19 @@ void testAtomProps() {
   a1->setProp("cprop1", 1, true);
   a1->setProp("cprop2", 2, true);
   STR_VECT cplst;
-  a1->getProp(detail::computedPropName, cplst);
+  a1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 2, "");
   CHECK_INVARIANT(cplst[0] == "cprop1", "");
   CHECK_INVARIANT(cplst[1] == "cprop2", "");
 
   a1->clearProp("cprop1");
   CHECK_INVARIANT(!a1->hasProp("cprop1"), "");
-  a1->getProp(detail::computedPropName, cplst);
+  a1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 1, "");
 
   a1->clearComputedProps();
   CHECK_INVARIANT(!a1->hasProp("cprop2"), "");
-  a1->getProp(detail::computedPropName, cplst);
+  a1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 0, "");
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -342,19 +343,19 @@ void testBondProps() {
   b1->setProp("cprop1", 1, true);
   b1->setProp("cprop2", 2, true);
   STR_VECT cplst;
-  b1->getProp(detail::computedPropName, cplst);
+  b1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 2, "");
   CHECK_INVARIANT(cplst[0] == "cprop1", "");
   CHECK_INVARIANT(cplst[1] == "cprop2", "");
 
   b1->clearProp("cprop1");
   CHECK_INVARIANT(!b1->hasProp("cprop1"), "");
-  b1->getProp(detail::computedPropName, cplst);
+  b1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 1, "");
 
   b1->clearComputedProps();
   CHECK_INVARIANT(!b1->hasProp("cprop2"), "");
-  b1->getProp(detail::computedPropName, cplst);
+  b1->getProp(RDKit::detail::computedPropName, cplst);
   CHECK_INVARIANT(cplst.size() == 0, "");
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -865,6 +866,16 @@ void test1() {
     BOOST_LOG(rdInfoLog) << " trying a replace " << endl;
     Atom *repA = new Atom(22);
     m.replaceAtom(newIdx, repA);
+    delete repA;
+    TEST_ASSERT(m.getAtomWithIdx(newIdx)->getAtomicNum() == 22);
+    Bond *nbnd = new Bond(Bond::DOUBLE);
+    TEST_ASSERT(m.getBondWithIdx(m.getNumBonds() - 1)->getBondType() ==
+                Bond::AROMATIC);
+    m.replaceBond(m.getNumBonds() - 1, nbnd);
+    m.debugMol(std::cerr);
+    TEST_ASSERT(m.getBondWithIdx(m.getNumBonds() - 1)->getBondType() ==
+                nbnd->getBondType());
+    delete nbnd;
   }
   {
     RWMol m;
@@ -1299,6 +1310,34 @@ void testGithub381() {
 void testGithub381() {}
 #endif
 
+void testGithub1041() {
+  BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdErrorLog) << "    Test github1041: Segfault for atom with no "
+                           "owner (expect some warnings)"
+                        << std::endl;
+  {
+    Atom at(6);
+    bool ok = false;
+    try {
+      at.getOwningMol();
+    } catch (const Invar::Invariant &err) {
+      ok = true;
+    }
+    TEST_ASSERT(ok);
+  }
+  {
+    Bond b;
+    bool ok = false;
+    try {
+      b.getOwningMol();
+    } catch (const Invar::Invariant &err) {
+      ok = true;
+    }
+    TEST_ASSERT(ok);
+  }
+  BOOST_LOG(rdErrorLog) << "  done" << std::endl;
+}
+
 // -------------------------------------------------------------------
 int main() {
   RDLog::InitLogs();
@@ -1325,6 +1364,7 @@ int main() {
   testAtomListLineRoundTrip();
   testGithub608();
   testGithub381();
+  testGithub1041();
 
   return 0;
 }

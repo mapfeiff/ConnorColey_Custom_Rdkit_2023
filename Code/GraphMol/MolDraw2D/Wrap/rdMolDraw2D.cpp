@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2015 Greg Landrum
+//  Copyright (C) 2015-2017 Greg Landrum
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -26,35 +26,39 @@ namespace python = boost::python;
 
 namespace RDKit {
 namespace {
+void pyDictToColourMap(python::object pyo, std::map<int, DrawColour> &res) {
+  python::dict tDict = python::extract<python::dict>(pyo);
+  for (unsigned int i = 0;
+       i < python::extract<unsigned int>(tDict.keys().attr("__len__")()); ++i) {
+    python::tuple tpl = python::extract<python::tuple>(tDict.values()[i]);
+    float r = python::extract<float>(tpl[0]);
+    float g = python::extract<float>(tpl[1]);
+    float b = python::extract<float>(tpl[2]);
+    DrawColour clr(r, g, b);
+    res[python::extract<int>(tDict.keys()[i])] = clr;
+  }
+}
 std::map<int, DrawColour> *pyDictToColourMap(python::object pyo) {
   std::map<int, DrawColour> *res = NULL;
   if (pyo) {
     res = new std::map<int, DrawColour>;
-    python::dict tDict = python::extract<python::dict>(pyo);
-    for (unsigned int i = 0;
-         i < python::extract<unsigned int>(tDict.keys().attr("__len__")());
-         ++i) {
-      python::tuple tpl = python::extract<python::tuple>(tDict.values()[i]);
-      float r = python::extract<float>(tpl[0]);
-      float g = python::extract<float>(tpl[1]);
-      float b = python::extract<float>(tpl[2]);
-      DrawColour clr(r, g, b);
-      (*res)[python::extract<int>(tDict.keys()[i])] = clr;
-    }
+    pyDictToColourMap(pyo, *res);
   }
   return res;
+}
+void pyDictToDoubleMap(python::object pyo, std::map<int, double> &res) {
+  python::dict tDict = python::extract<python::dict>(pyo);
+  for (unsigned int i = 0;
+       i < python::extract<unsigned int>(tDict.keys().attr("__len__")()); ++i) {
+    double r = python::extract<double>(tDict.values()[i]);
+    res[python::extract<int>(tDict.keys()[i])] = r;
+  }
 }
 std::map<int, double> *pyDictToDoubleMap(python::object pyo) {
   std::map<int, double> *res = NULL;
   if (pyo) {
     res = new std::map<int, double>;
-    python::dict tDict = python::extract<python::dict>(pyo);
-    for (unsigned int i = 0;
-         i < python::extract<unsigned int>(tDict.keys().attr("__len__")());
-         ++i) {
-      double r = python::extract<double>(tDict.values()[i]);
-      (*res)[python::extract<int>(tDict.keys()[i])] = r;
-    }
+    pyDictToDoubleMap(pyo, *res);
   }
   return res;
 }
@@ -97,6 +101,101 @@ void drawMoleculeHelper2(MolDraw2D &self, const ROMol &mol,
   delete hbm;
   delete har;
 }
+void drawMoleculesHelper2(MolDraw2D &self, python::object pmols,
+                          python::object highlight_atoms,
+                          python::object highlight_bonds,
+                          python::object highlight_atom_map,
+                          python::object highlight_bond_map,
+                          python::object highlight_atom_radii,
+                          python::object pconfIds, python::object plegends) {
+  rdk_auto_ptr<std::vector<ROMol *> > mols = pythonObjectToVect<ROMol *>(pmols);
+  unsigned int nThere = mols->size();
+  rdk_auto_ptr<std::vector<std::vector<int> > > highlightAtoms;
+  if (highlight_atoms) {
+    if (python::extract<unsigned int>(highlight_atoms.attr("__len__")()) !=
+        nThere) {
+      throw ValueErrorException(
+          "If highlightAtoms is provided it must be the same length as the "
+          "molecule list.");
+    }
+    highlightAtoms.reset(new std::vector<std::vector<int> >(nThere));
+    for (unsigned int i = 0; i < nThere; ++i) {
+      pythonObjectToVect(highlight_atoms[i], (*highlightAtoms)[i]);
+    }
+  }
+  rdk_auto_ptr<std::vector<std::vector<int> > > highlightBonds;
+  if (highlight_bonds) {
+    if (python::extract<unsigned int>(highlight_bonds.attr("__len__")()) !=
+        nThere) {
+      throw ValueErrorException(
+          "If highlightBonds is provided it must be the same length as the "
+          "molecule list.");
+    }
+    highlightBonds.reset(new std::vector<std::vector<int> >(nThere));
+    for (unsigned int i = 0; i < nThere; ++i) {
+      pythonObjectToVect(highlight_bonds[i], (*highlightBonds)[i]);
+    }
+  }
+
+  rdk_auto_ptr<std::vector<std::map<int, DrawColour> > > highlightAtomMap;
+  if (highlight_atom_map) {
+    if (python::extract<unsigned int>(highlight_atom_map.attr("__len__")()) !=
+        nThere) {
+      throw ValueErrorException(
+          "If highlightAtomMap is provided it must be the same length as the "
+          "molecule list.");
+    }
+    highlightAtomMap.reset(new std::vector<std::map<int, DrawColour> >(nThere));
+    for (unsigned int i = 0; i < nThere; ++i) {
+      pyDictToColourMap(highlight_atom_map[i], (*highlightAtomMap)[i]);
+    }
+  }
+  rdk_auto_ptr<std::vector<std::map<int, DrawColour> > > highlightBondMap;
+  if (highlight_bond_map) {
+    if (python::extract<unsigned int>(highlight_bond_map.attr("__len__")()) !=
+        nThere) {
+      throw ValueErrorException(
+          "If highlightBondMap is provided it must be the same length as the "
+          "molecule list.");
+    }
+    highlightBondMap.reset(new std::vector<std::map<int, DrawColour> >(nThere));
+    for (unsigned int i = 0; i < nThere; ++i) {
+      pyDictToColourMap(highlight_bond_map[i], (*highlightBondMap)[i]);
+    }
+  }
+  rdk_auto_ptr<std::vector<std::map<int, double> > > highlightRadii;
+  if (highlight_atom_radii) {
+    if (python::extract<unsigned int>(highlight_atom_radii.attr("__len__")()) !=
+        nThere) {
+      throw ValueErrorException(
+          "If highlightAtomRadii is provided it must be the same length as the "
+          "molecule list.");
+    }
+    highlightRadii.reset(new std::vector<std::map<int, double> >(nThere));
+    for (unsigned int i = 0; i < nThere; ++i) {
+      pyDictToDoubleMap(highlight_atom_radii[i], (*highlightRadii)[i]);
+    }
+  }
+  // rdk_auto_ptr<std::vector<int> > highlightAtoms =
+  //     pythonObjectToVect(highlight_atoms,
+  //     static_cast<int>(mol.getNumAtoms()));
+  // rdk_auto_ptr<std::vector<int> > highlightBonds =
+  //     pythonObjectToVect(highlight_bonds,
+  //     static_cast<int>(mol.getNumBonds()));
+  // FIX: support these
+  // std::map<int, DrawColour> *ham = pyDictToColourMap(highlight_atom_map);
+  // std::map<int, DrawColour> *hbm = pyDictToColourMap(highlight_bond_map);
+  // std::map<int, double> *har = pyDictToDoubleMap(highlight_atom_radii);
+  //
+  rdk_auto_ptr<std::vector<int> > confIds = pythonObjectToVect<int>(pconfIds);
+  rdk_auto_ptr<std::vector<std::string> > legends =
+      pythonObjectToVect<std::string>(plegends);
+
+  self.drawMolecules(*mols, legends.get(), highlightAtoms.get(),
+                     highlightBonds.get(), highlightAtomMap.get(),
+                     highlightBondMap.get(), highlightRadii.get(),
+                     confIds.get());
+}
 
 #ifdef RDK_CAIRO_BUILD
 python::object getCairoDrawingText(const RDKit::MolDraw2DCairo &self) {
@@ -134,6 +233,9 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
       //.def_readwrite("highlightColour",&RDKit::MolDrawOptions::highlightColour)
       .def_readwrite("atomLabels", &RDKit::MolDrawOptions::atomLabels,
                      "maps indices to atom labels")
+      .def_readwrite("atomLabelDeuteriumTritium",
+                     &RDKit::MolDrawOptions::atomLabelDeuteriumTritium,
+                     "labels deuterium as D and tritium as T")
       .def_readwrite("continuousHighlight",
                      &RDKit::MolDrawOptions::continuousHighlight)
       .def_readwrite("flagCloseContactsDist",
@@ -148,7 +250,13 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
                      "font size in pixels of the legend (if drawn)")
       .def_readwrite(
           "multipleBondOffset", &RDKit::MolDrawOptions::multipleBondOffset,
-          "offset (in Angstroms) for the extra lines in a multiple bond");
+          "offset (in Angstroms) for the extra lines in a multiple bond")
+      .def_readwrite("padding", &RDKit::MolDrawOptions::padding,
+                     "fraction of empty space to leave around molecule")
+      .def_readwrite("additionalAtomLabelPadding",
+                     &RDKit::MolDrawOptions::additionalAtomLabelPadding,
+                     "additional padding to leave around atom labels. "
+                     "Expressed as a fraction of the font size.");
   docString = "Drawer abstract base class";
   python::class_<RDKit::MolDraw2D, boost::noncopyable>(
       "MolDraw2D", docString.c_str(), python::no_init)
@@ -172,10 +280,26 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
            python::arg("highlightAtomRadii") = python::object(),
            python::arg("confId") = -1, python::arg("legend") = std::string("")),
           "renders a molecule\n")
+      .def("DrawMolecules", RDKit::drawMoleculesHelper2,
+           (python::arg("self"), python::arg("mols"),
+            python::arg("highlightAtoms") = python::object(),
+            python::arg("highlightBonds") = python::object(),
+            python::arg("highlightAtomColors") = python::object(),
+            python::arg("highlightBondColors") = python::object(),
+            python::arg("highlightAtomRadii") = python::object(),
+            python::arg("confIds") = python::object(),
+            python::arg("legends") = python::object()),
+           "renders multiple molecules\n")
       .def("Width", &RDKit::MolDraw2D::width,
            "get the width of the drawing canvas")
       .def("Height", &RDKit::MolDraw2D::height,
            "get the height of the drawing canvas")
+      .def("SetOffset", &RDKit::MolDraw2D::setOffset,
+           "set the offset (in drawing coordinates) for the drawing")
+      .def("Offset", &RDKit::MolDraw2D::offset,
+           "returns the offset (in drawing coordinates) for the drawing")
+      .def("SetScale", &RDKit::MolDraw2D::setScale,
+           "uses the values provided to set the drawing scaling")
       .def("DrawString", &RDKit::MolDraw2D::drawString,
            (python::arg("self"), python::arg("string"), python::arg("pos")),
            "add text to the canvas")
@@ -188,6 +312,7 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
   python::class_<RDKit::MolDraw2DSVG, python::bases<RDKit::MolDraw2D>,
                  boost::noncopyable>("MolDraw2DSVG", docString.c_str(),
                                      python::init<int, int>())
+      .def(python::init<int, int, int, int>())
       .def("FinishDrawing", &RDKit::MolDraw2DSVG::finishDrawing,
            "add the last bits of SVG to finish the drawing")
       .def("GetDrawingText", &RDKit::MolDraw2DSVG::getDrawingText,
@@ -198,6 +323,7 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
   python::class_<RDKit::MolDraw2DCairo, python::bases<RDKit::MolDraw2D>,
                  boost::noncopyable>("MolDraw2DCairo", docString.c_str(),
                                      python::init<int, int>())
+      .def(python::init<int, int, int, int>())
       .def("FinishDrawing", &RDKit::MolDraw2DCairo::finishDrawing,
            "add the last bits to finish the drawing")
       .def("GetDrawingText", &RDKit::getCairoDrawingText,

@@ -2689,10 +2689,15 @@ void testSFIssue1894348() {
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms().size() == 2);
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms()[0] == 0);
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms()[1] == 4);
+  // we remove an H attached to a stereo bond
   m2 = static_cast<RWMol *>(MolOps::removeHs(static_cast<const ROMol &>(*m)));
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms().size() == 2);
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms()[0] == 0);
   TEST_ASSERT(m->getBondWithIdx(2)->getStereoAtoms()[1] == 4);
+  // at first the stereoatoms are gone:
+  TEST_ASSERT(m2->getBondWithIdx(2)->getStereoAtoms().size() == 0);
+  // but they can be re-perceived:
+  MolOps::assignStereochemistry(*m2, true, true);
   TEST_ASSERT(m2->getBondWithIdx(1)->getStereoAtoms().size() == 2);
   TEST_ASSERT(m2->getBondWithIdx(1)->getStereoAtoms()[0] == 0);
   TEST_ASSERT(m2->getBondWithIdx(1)->getStereoAtoms()[1] == 3);
@@ -3330,6 +3335,7 @@ void testSFNetIssue2951221() {
     pathName += "/Code/GraphMol/test_data/";
     ROMol *m = MolFileToMol(pathName + "Issue2951221.1.mol");
     TEST_ASSERT(m);
+    TEST_ASSERT(m->getConformer().is3D());
     ROMol *m2 = MolOps::addHs(*m, false, true);
     TEST_ASSERT(m2);
     delete m;
@@ -3344,6 +3350,7 @@ void testSFNetIssue2951221() {
             .dotProduct(
                 (coords[1] - coords[0]).crossProduct(coords[2] - coords[0]));
     TEST_ASSERT(dot > 1.0);
+    delete m2;
   }
 
   {
@@ -3361,6 +3368,7 @@ void testSFNetIssue2951221() {
     std::string cip;
     m2->getAtomWithIdx(1)->getProp(common_properties::_CIPCode, cip);
     TEST_ASSERT(cip == "S");
+    delete m2;
   }
   {
     std::string pathName = getenv("RDBASE");
@@ -3377,6 +3385,7 @@ void testSFNetIssue2951221() {
     std::string cip;
     m2->getAtomWithIdx(1)->getProp(common_properties::_CIPCode, cip);
     TEST_ASSERT(cip == "R");
+    delete m2;
   }
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -4634,6 +4643,7 @@ void _renumberTest(const ROMol *m) {
     }
 
     std::string nSmi = MolToSmiles(*nm, true);
+    if (nSmi != refSmi) std::cerr << refSmi << std::endl << nSmi << std::endl;
     TEST_ASSERT(nSmi == refSmi);
     delete nm;
   }
@@ -5284,6 +5294,7 @@ void testAdjustQueryProperties() {
   BOOST_LOG(rdInfoLog)
       << "-----------------------\n Testing adjustQueryProperties()"
       << std::endl;
+#if 1
   {  // basics from SMILES
     std::string smiles = "C1CCC1C";
     ROMol *qm = SmilesToMol(smiles);
@@ -5382,7 +5393,7 @@ void testAdjustQueryProperties() {
       delete aqm;
       aqp.adjustDegree = true;
       aqp.adjustRingCount = false;
-      aqp.adjustDegreeFlags = MolOps::ADJUST_EMPTY;
+      aqp.adjustDegreeFlags = MolOps::ADJUST_IGNORENONE;
       aqm = MolOps::adjustQueryProperties(*qm, &aqp);
       TEST_ASSERT(aqm);
       TEST_ASSERT(aqm->getNumAtoms() == 6);
@@ -5411,9 +5422,10 @@ void testAdjustQueryProperties() {
       TEST_ASSERT(SubstructMatch(*m, *aqm, match));
 
       delete aqm;
-      aqp.adjustRingCountFlags = MolOps::ADJUST_EMPTY;  // neither "not dummy"
-                                                        // nor "in ring"
-                                                        // restrictions
+      aqp.adjustRingCountFlags =
+          MolOps::ADJUST_IGNORENONE;  // neither "not dummy"
+                                      // nor "in ring"
+                                      // restrictions
       aqm = MolOps::adjustQueryProperties(*qm, &aqp);
       TEST_ASSERT(aqm);
       TEST_ASSERT(aqm->getNumAtoms() == 6);
@@ -5479,6 +5491,273 @@ void testAdjustQueryProperties() {
     }
     delete qm;
     delete aqm;
+  }
+  {  // CTAB
+    //  -- only match rgroups
+    std::string mb =
+        "adjust.mol\n"
+        "  ChemDraw06271617272D\n"
+        "\n"
+        "  7  7  0  0  0  0  0  0  0  0999 V2000\n"
+        "   -1.0717    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "   -1.0717   -0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "   -0.3572   -0.8250    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "    0.3572   -0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "    0.3572    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "   -0.3572    0.8250    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n"
+        "    1.0717    0.8250    0.0000 R   0  0  0  0  0  0  0  0  0  1  0  "
+        "0\n"
+        "  1  2  1  0      \n"
+        "  2  3  2  0      \n"
+        "  3  4  1  0      \n"
+        "  4  5  2  0      \n"
+        "  5  6  1  0      \n"
+        "  6  1  2  0      \n"
+        "  5  7  1  0      \n"
+        "M  END\n";
+    MolOps::AdjustQueryParameters params;
+    params.aromatizeIfPossible = false;
+    params.makeDummiesQueries = true;
+    params.adjustDegreeFlags =
+        (MolOps::ADJUST_IGNOREDUMMIES | MolOps::ADJUST_IGNORECHAINS |
+         MolOps::ADJUST_IGNOREMAPPED);
+
+    RWMol *m = MolBlockToMol(mb, false, false);
+    MolOps::adjustQueryProperties(*m, &params);
+    MatchVectType match;
+    ROMol *t = SmilesToMol("c1ccccc1Cl");
+    // shouldn't match (aromaticity):
+    TEST_ASSERT(!SubstructMatch(*t, *m, match));
+    // adjust aromaticity and then it should match:
+    params.aromatizeIfPossible = true;
+    MolOps::adjustQueryProperties(*m, &params);
+    TEST_ASSERT(SubstructMatch(*t, *m, match));
+
+    delete t;
+    // shouldn't match (explicit degree)
+    t = SmilesToMol("c1ccc(Cl)cc1Cl");
+    TEST_ASSERT(!SubstructMatch(*t, *m, match));
+    delete m;
+  }
+
+  {  // CTAB
+    //  -- match non rgroups if mapped
+    std::string mb =
+        "adjust.mol\n"
+        "  ChemDraw06271617272D\n"
+        "\n"
+        "  7  7  0  0  0  0  0  0  0  0999 V2000\n"
+        "   -1.0717    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  2  0  "
+        "0\n"
+        "   -1.0717   -0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  3  0  "
+        "0\n"
+        "   -0.3572   -0.8250    0.0000 C   0  0  0  0  0  0  0  0  0  4  0  "
+        "0\n"
+        "    0.3572   -0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  5  0  "
+        "0\n"
+        "    0.3572    0.4125    0.0000 C   0  0  0  0  0  0  0  0  0  6  0  "
+        "0\n"
+        "   -0.3572    0.8250    0.0000 C   0  0  0  0  0  0  0  0  0  7  0  "
+        "0\n"
+        "    1.0717    0.8250    0.0000 R   0  0  0  0  0  0  0  0  0  1  0  "
+        "0\n"
+        "  1  2  1  0      \n"
+        "  2  3  2  0      \n"
+        "  3  4  1  0      \n"
+        "  4  5  2  0      \n"
+        "  5  6  1  0      \n"
+        "  6  1  2  0      \n"
+        "  5  7  1  0      \n"
+        "M  END\n";
+    MolOps::AdjustQueryParameters params;
+    params.aromatizeIfPossible = true;
+    params.makeDummiesQueries = true;
+    params.adjustDegreeFlags =
+        (MolOps::ADJUST_IGNOREDUMMIES | MolOps::ADJUST_IGNORECHAINS |
+         MolOps::ADJUST_IGNOREMAPPED);
+
+    RWMol *m = MolBlockToMol(mb);
+    MolOps::adjustQueryProperties(*m, &params);
+    MatchVectType match;
+    ROMol *t = SmilesToMol("c1ccccc1Cl");
+    TEST_ASSERT(SubstructMatch(*t, *m, match));
+    delete t;
+    // should match (mapped!)
+    t = SmilesToMol("c1c(Cl)cc(Cl)cc1Cl");
+    TEST_ASSERT(SubstructMatch(*t, *m, match));
+    delete m;
+  }
+#endif
+  {  // make atoms generic
+    std::string smiles = "C1CC1CC";
+    ROMol *qm = SmilesToMol(smiles);
+    TEST_ASSERT(qm);
+    TEST_ASSERT(qm->getNumAtoms() == 5);
+
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeAtomsGeneric = true;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      // std::cerr << MolToSmarts(*aqm) << std::endl;
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "O1CN1NN";
+        ROMol *m = SmilesToMol(smiles);
+        // std::cerr << MolToSmiles(*m) << std::endl;
+
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeAtomsGeneric = true;
+      params.makeAtomsGenericFlags = MolOps::ADJUST_IGNORECHAINS;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "O1CN1NN";
+        ROMol *m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(!SubstructMatch(*m, *aqm, match));
+        delete m;
+        smiles = "O1CN1CC";
+        m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeAtomsGeneric = true;
+      params.makeAtomsGenericFlags = MolOps::ADJUST_IGNORERINGS;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "O1CN1NN";
+        ROMol *m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(!SubstructMatch(*m, *aqm, match));
+        delete m;
+        smiles = "C1CC1NN";
+        m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+
+    delete qm;
+  }
+
+  {  // make bonds generic
+    std::string smiles = "N1C=C1C=C";
+    ROMol *qm = SmilesToMol(smiles);
+    TEST_ASSERT(qm);
+    TEST_ASSERT(qm->getNumAtoms() == 5);
+
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeBondsGeneric = true;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "N1=CC1=CC";
+        ROMol *m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeBondsGeneric = true;
+      params.makeBondsGenericFlags = MolOps::ADJUST_IGNORECHAINS;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "N1=CC1=C=C";
+        ROMol *m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(!SubstructMatch(*m, *aqm, match));
+        delete m;
+        smiles = "N1=CC1C=C";
+        m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+    {
+      MolOps::AdjustQueryParameters params;
+      params.makeBondsGeneric = true;
+      params.makeBondsGenericFlags = MolOps::ADJUST_IGNORERINGS;
+
+      ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+      TEST_ASSERT(aqm);
+      TEST_ASSERT(aqm->getNumAtoms() == qm->getNumAtoms());
+      {
+        MatchVectType match;
+        TEST_ASSERT(SubstructMatch(*qm, *aqm, match));
+        std::string smiles = "N1=CC1=C=C";
+        ROMol *m = SmilesToMol(smiles);
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(!SubstructMatch(*m, *aqm, match));
+        delete m;
+        smiles = "N1C=C1CC#C";
+        m = SmilesToMol(smiles);
+
+        TEST_ASSERT(m);
+        TEST_ASSERT(!SubstructMatch(*m, *qm, match));
+        TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+        delete m;
+      }
+      delete aqm;
+    }
+
+    delete qm;
   }
 
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
@@ -5649,6 +5928,7 @@ void testPotentialStereoBonds() {
   BOOST_LOG(rdInfoLog)
       << "-----------------------\n Testing findPotentialStereoBonds"
       << std::endl;
+
   {  // starting point: full sanitization
     std::string smiles =
         "Br/C(=N\\N=c1/nn[nH][nH]1)c1ccncc1";  // possible problem reported by
@@ -5675,7 +5955,238 @@ void testPotentialStereoBonds() {
     TEST_ASSERT(m->getBondWithIdx(3)->getStereoAtoms().size() == 2);
     delete m;
   }
+
+  // this next block is for github1230: FindPotentialStereoBonds() failure
+  {  // simple
+    std::string smiles = "CC=CC";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 4);
+    TEST_ASSERT(m->getBondWithIdx(1)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(1)->getStereo() == Bond::STEREONONE);
+
+    MolOps::findPotentialStereoBonds(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(1)->getStereo() == Bond::STEREOANY);
+
+    delete m;
+  }
+  {  // simple2
+    std::string smiles = "CC=C(C)C";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 5);
+    TEST_ASSERT(m->getBondWithIdx(1)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(1)->getStereo() == Bond::STEREONONE);
+
+    MolOps::findPotentialStereoBonds(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(1)->getStereo() == Bond::STEREONONE);
+
+    delete m;
+  }
+  {  // the real problem
+    std::string smiles = "CC/C=C/C(\\C=C/CC)=C(CC)CO";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 14);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOZ);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREONONE);
+    MolOps::findPotentialStereoBonds(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOANY);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOANY);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREOANY);
+
+    delete m;
+  }
+  {  // repeat the real problem, but set the cleanIt argument to false
+    std::string smiles = "CC/C=C/C(\\C=C/CC)=C(CC)CO";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 14);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOZ);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREONONE);
+    MolOps::findPotentialStereoBonds(*m, false);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOZ);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREOANY);
+
+    delete m;
+  }
+
+  {  // just do document that we still don't do this one, which is much harder
+    std::string smiles = "CC/C=C/C(/C=C/CC)=C(CC)CO";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 14);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREONONE);
+    MolOps::findPotentialStereoBonds(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getStereo() == Bond::STEREOANY);
+    TEST_ASSERT(m->getBondWithIdx(5)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(5)->getStereo() == Bond::STEREOANY);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(8)->getStereo() == Bond::STEREONONE);
+
+    delete m;
+  }
+
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
+}
+
+void testSetBondStereo() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing Bond::setStereo(Bond::STEREOCIS / Bond::STEREOTRANS)"
+                       << std::endl;
+
+  // tests to make sure neighboring bond stereo is handled properly
+  {
+    const char *smiles[] = {"CC=CC",   "CC=C/C=C/C",   "CC=C/C=C\\C",   "CC=C\\C=C/C",   "CC=C\\C=C\\C",
+                          "C(C)=CC", "C(C)=C/C=C/C", "C(C)=C/C=C\\C", "C(C)=C\\C=C/C", "C(C)=C\\C=C\\C"};
+    const Bond::BondStereo stereos[] = {Bond::STEREOCIS, Bond::STEREOTRANS};
+    const Bond::BondStereo ezstros[] = {Bond::STEREOZ,   Bond::STEREOE};
+
+    for (size_t i = 0; i < 10; ++i) {
+      ROMol *m = SmilesToMol(smiles[i]);
+      MolOps::findPotentialStereoBonds(*m);
+      Bond *bond = m->getBondWithIdx(1);
+
+      for (size_t j = 0; j < 2; ++j) {
+        Bond::BondStereo desired_stereo = stereos[j];
+        bond->setStereo(desired_stereo);
+
+        bool doIsomericSmiles = true;
+        bool doKekule = false;
+        int rootedAtAtom = -1;
+        bool canonical = false;
+        std::string isosmi = MolToSmiles(*m, doIsomericSmiles, doKekule, rootedAtAtom, canonical);
+
+        ROMol *isomol = SmilesToMol(isosmi);
+        Bond *isobond = isomol->getBondWithIdx(1);
+        const Bond::BondStereo expected_ez_stereo = ezstros[j];
+        TEST_ASSERT(isobond->getStereo() == expected_ez_stereo);
+
+        std::string round_trip_isosmi = MolToSmiles(*m, doIsomericSmiles, doKekule, rootedAtAtom, canonical);
+        TEST_ASSERT(isosmi == round_trip_isosmi);
+
+        BOOST_LOG(rdInfoLog) << isosmi << " == " << round_trip_isosmi << " " << desired_stereo << std::endl;
+
+        delete isomol;
+      }
+      delete m;
+    }
+  }
+
+  // tests enumerating all possible smiles with halogens still yield
+  // the same isomeric canonical smiles strings.
+  {
+    const char *smiles[] = {"ClC=CF",
+                            "FC=CCl",
+                            "C(Cl)=CF",
+                            "C(F)=CCl"};
+    const Bond::BondStereo stereos[] = {Bond::STEREOCIS, Bond::STEREOTRANS};
+
+    for (size_t j = 0; j < 2; ++j) {
+      Bond::BondStereo desired_stereo = stereos[j];
+
+      std::string refSmiles;
+      for (size_t i = 0; i < 4; ++i) {
+        ROMol *m = SmilesToMol(smiles[i]);
+        MolOps::findPotentialStereoBonds(*m);
+        TEST_ASSERT(m->getNumAtoms() == 4);
+
+        Bond *doubleBond = m->getBondWithIdx(1);
+        doubleBond->setStereo(desired_stereo);
+
+        bool doIsomericSmiles = true;
+        std::string isocansmi = MolToSmiles(*m, doIsomericSmiles);
+
+        if (refSmiles.empty()) {
+          refSmiles = isocansmi;
+        }
+        BOOST_LOG(rdInfoLog) << refSmiles << " == " << isocansmi << " " << desired_stereo << std::endl;
+        TEST_ASSERT(refSmiles == isocansmi);
+
+        delete m;
+      }
+    }
+  }
+}
+
+void testBondSetStereoAtoms() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing Bond::setStereoAtoms(...)"
+                       << std::endl;
+
+  // tests to make sure setStereoAtoms works as expected
+  {
+    bool doIsomericSmiles = true;
+    std::string unspec_smiles = "FC(Cl)=C(Br)I";
+
+    ROMol *m = SmilesToMol(unspec_smiles);
+
+    Bond *doubleBond = m->getBondWithIdx(2);
+    TEST_ASSERT(doubleBond->getBondType() == 2);
+
+
+    doubleBond->setStereoAtoms(0, 4);
+    doubleBond->setStereo(Bond::STEREOCIS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(\\Br)I");
+    // this should be the same as the previous
+    doubleBond->setStereoAtoms(0, 5);
+    doubleBond->setStereo(Bond::STEREOTRANS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(\\Br)I");
+
+
+    doubleBond->setStereoAtoms(0, 4);
+    doubleBond->setStereo(Bond::STEREOTRANS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(/Br)I");
+    // this should be the same as the previous
+    doubleBond->setStereoAtoms(0, 5);
+    doubleBond->setStereo(Bond::STEREOCIS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(/Br)I");
+
+
+    doubleBond->setStereoAtoms(3, 4);
+    doubleBond->setStereo(Bond::STEREOTRANS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(\\Br)I");
+    // this should be the same as the previous
+    doubleBond->setStereoAtoms(3, 5);
+    doubleBond->setStereo(Bond::STEREOCIS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(\\Br)I");
+
+
+    doubleBond->setStereoAtoms(3, 4);
+    doubleBond->setStereo(Bond::STEREOCIS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(/Br)I");
+    // this should be the same as the previous
+    doubleBond->setStereoAtoms(3, 5);
+    doubleBond->setStereo(Bond::STEREOTRANS);
+    BOOST_LOG(rdInfoLog) << MolToSmiles(*m, doIsomericSmiles) << std::endl;
+    TEST_ASSERT(MolToSmiles(*m, doIsomericSmiles) == "F/C(Cl)=C(/Br)I");
+  }
 }
 
 void testGithubIssue754() {
@@ -5839,6 +6350,130 @@ void testGithubIssue518() {
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
 
+void testSimpleAromaticity() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing simple aromaticity"
+                       << std::endl;
+  {
+    std::string smiles = "c1ccccc1";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    MolOps::Kekulize(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_SIMPLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    delete m;
+  }
+  {
+    std::string smiles = "c1[nH]ccc1";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    MolOps::Kekulize(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_SIMPLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    delete m;
+  }
+  {  // ring size constraints
+    std::string smiles = "c1cccoocc1";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    MolOps::Kekulize(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_SIMPLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    delete m;
+  }
+  {  // ring size constraints
+    std::string smiles = "c1coo1";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    MolOps::Kekulize(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_SIMPLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    delete m;
+  }
+  {  // fused rings are not considered
+    std::string smiles = "C1=CC2=CC=CC=CC2=C1";  // azulene
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    MolOps::Kekulize(*m, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_SIMPLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
+}
+
+//! really dumb aromaticity: any conjugated ring bond is aromatic
+int customAromaticity(RWMol &m) {
+  m.updatePropertyCache();
+  MolOps::setConjugation(m);
+  MolOps::fastFindRings(m);
+  int res = 0;
+  for (ROMol::BondIterator bIt = m.beginBonds(); bIt != m.endBonds(); ++bIt) {
+    if ((*bIt)->getIsConjugated() && queryIsBondInRing(*bIt)) {
+      (*bIt)->setIsAromatic(true);
+      (*bIt)->getBeginAtom()->setIsAromatic(true);
+      (*bIt)->getEndAtom()->setIsAromatic(true);
+      ++res;
+    }
+  }
+  return res;
+}
+
+void testCustomAromaticity() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing custom aromaticity"
+                       << std::endl;
+
+  {
+    std::string smiles = "C1=CC=CC=C1";
+    RWMol *m = SmilesToMol(smiles, 0, false);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_CUSTOM, customAromaticity);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == true);
+    delete m;
+  }
+  {
+    std::string smiles = "C1CC=CC=C1";
+    RWMol *m = SmilesToMol(smiles, 0, false);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    MolOps::setAromaticity(*m, MolOps::AROMATICITY_CUSTOM, customAromaticity);
+    TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getIsAromatic() == false);
+    TEST_ASSERT(m->getBondWithIdx(2)->getIsAromatic() == true);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getIsAromatic() == true);
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
+}
+
 void testKekulizeErrorReporting() {
   BOOST_LOG(rdInfoLog)
       << "-----------------------\n Testing error reporting for kekulization"
@@ -5951,6 +6586,173 @@ void testGithubIssue868() {
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
 
+void testGithubIssue908() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing github issue 908: "
+                          "AddHs() using 3D coordinates with 2D conformations"
+                       << std::endl;
+  {
+    std::string mb =
+        "\n     RDKit          2D\n\n  4  3  0  0  0  0  0  0  0  0999 V2000\n "
+        "  -0.0000   -1.5000    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  "
+        "0\n   -0.0000   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0 "
+        " 0\n    1.2990    0.7500    0.0000 F   0  0  0  0  0  0  0  0  0  0  "
+        "0  0\n   -1.2990    0.7500    0.0000 Cl  0  0  0  0  0  0  0  0  0  0 "
+        " 0  0\n  2  1  1  1\n  2  3  1  0\n  2  4  1  0\nM  END\n";
+    RWMol *m = MolBlockToMol(mb);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 4);
+    MolOps::addHs(*m, false, true);
+    TEST_ASSERT(m->getNumAtoms() == 5);
+    TEST_ASSERT(feq(m->getConformer().getAtomPos(4).z, 0.0));
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+
+void testGithubIssue962() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing github issue 962: "
+                          "Kekulization issues post successful smiles parsing"
+                       << std::endl;
+  {
+    std::string smi = "C2*c1ccccc1C2";
+    RWMol *m = SmilesToMol(smi, 0, false);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 9);
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 1));
+    TEST_ASSERT(m->getBondBetweenAtoms(2, 1));
+    m->updatePropertyCache();
+    MolOps::Kekulize(*m);
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 1)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondBetweenAtoms(2, 1)->getBondType() == Bond::SINGLE);
+
+    delete m;
+  }
+  {  // this one did not cause problems before, but verify!
+    std::string smi = "*2Cc1ccccc1C2";
+    RWMol *m = SmilesToMol(smi, 0, false);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 9);
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 1));
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 8));
+    m->updatePropertyCache();
+    MolOps::Kekulize(*m);
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 1)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondBetweenAtoms(0, 8)->getBondType() == Bond::SINGLE);
+
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+
+void testGithubIssue1021() {
+  BOOST_LOG(rdInfoLog)
+      << "-----------------------\n Testing github issue 1021: "
+         "AssignStereochemistry() giving incorrect results after "
+         "FastFindRings()"
+      << std::endl;
+  {
+    std::string smi = "C[C@H]1CC2CCCC(C1)[C@H]2N";
+    RWMol *m = SmilesToMol(smi);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 11);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+    TEST_ASSERT(m->getAtomWithIdx(9)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    m->clearComputedProps();
+    bool cleanit = true, force = true;
+    MolOps::assignStereochemistry(*m, cleanit, force);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+    TEST_ASSERT(m->getAtomWithIdx(9)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    m->clearComputedProps();
+    MolOps::fastFindRings(*m);
+    MolOps::assignStereochemistry(*m, cleanit, force);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+    TEST_ASSERT(m->getAtomWithIdx(9)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+void testGithubIssue607() {
+  BOOST_LOG(rdInfoLog)
+      << "-----------------------\n Testing github issue 607: "
+         "AssignAtomChiralTagsFromStructure() not recognizing chiral S"
+      << std::endl;
+  {
+    std::string pathName = getenv("RDBASE");
+    pathName += "/Code/GraphMol/test_data/";
+    ROMol *m = MolFileToMol(pathName + "1a9u.zwitterion.sdf");
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 27);
+    MolOps::assignChiralTypesFrom3D(*m);
+
+    TEST_ASSERT(m->getAtomWithIdx(26)->getAtomicNum() == 16);
+    TEST_ASSERT(m->getAtomWithIdx(26)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    delete m;
+  }
+  {
+    std::string pathName = getenv("RDBASE");
+    pathName += "/Code/GraphMol/test_data/";
+    ROMol *m = MolFileToMol(pathName + "1a9u.sdf");
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 27);
+    MolOps::assignChiralTypesFrom3D(*m);
+
+    TEST_ASSERT(m->getAtomWithIdx(26)->getAtomicNum() == 16);
+    TEST_ASSERT(m->getAtomWithIdx(26)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    delete m;
+  }
+  {  // convert S -> Se and test again
+    std::string pathName = getenv("RDBASE");
+    pathName += "/Code/GraphMol/test_data/";
+    ROMol *m = MolFileToMol(pathName + "1a9u.zwitterion.sdf");
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 27);
+    m->getAtomWithIdx(26)->setAtomicNum(34);
+    MolOps::assignChiralTypesFrom3D(*m);
+    TEST_ASSERT(m->getAtomWithIdx(26)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    delete m;
+  }
+  {  // convert S -> Se and test again
+    std::string pathName = getenv("RDBASE");
+    pathName += "/Code/GraphMol/test_data/";
+    ROMol *m = MolFileToMol(pathName + "1a9u.sdf");
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 27);
+    m->getAtomWithIdx(26)->setAtomicNum(34);
+    MolOps::assignChiralTypesFrom3D(*m);
+    TEST_ASSERT(m->getAtomWithIdx(26)->getChiralTag() != Atom::CHI_UNSPECIFIED);
+
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+
+void testGithubIssue1204() {
+  BOOST_LOG(rdInfoLog)
+      << "-----------------------\n Testing github issue 1204: "
+         "Support tetravalent and hexavalent Te"
+      << std::endl;
+  {
+    std::string smiles = "F[Te](F)(F)(F)(F)F";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    delete m;
+  }
+  {
+    std::string smiles = "F[Te](F)(F)(F)";
+    RWMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    delete m;
+  }
+
+  BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
+}
+
 int main() {
   RDLog::InitLogs();
 // boost::logging::enable_logs("rdApp.debug");
@@ -6030,16 +6832,27 @@ int main() {
   testGithubIssue510();
   testGithubIssue526();
   testGithubIssue539();
-  testAdjustQueryProperties();
   testGithubIssue678();
   testGithubIssue717();
-  testPotentialStereoBonds();
   testGithubIssue754();
   testGithubIssue805();
-#endif
   testGithubIssue518();
   testKekulizeErrorReporting();
   testGithubIssue868();
+  testSimpleAromaticity();
+  testCustomAromaticity();
+  testGithubIssue908();
+  testGithubIssue962();
+
+  testGithubIssue1021();
+  testGithubIssue607();
+  testAdjustQueryProperties();
+  testGithubIssue1204();
+  testPotentialStereoBonds();
+  testSetBondStereo();
+#endif
+
+  testBondSetStereoAtoms();
 
   return 0;
 }

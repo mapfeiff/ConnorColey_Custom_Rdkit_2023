@@ -39,17 +39,23 @@ option(RDK_USE_BOOST_SERIALIZATION "Use the boost serialization library if avail
 option(RDK_BUILD_TEST_GZIP "Build the gzip'd stream test" OFF)
 option(RDK_OPTIMIZE_NATIVE "Use native features while compiling." ON)
 option(RDK_USE_STRICT_ROTOR_DEFINITION "Use the most strict rotatable bond definition" ON)
-
+option(RDK_BUILD_DESCRIPTORS3D "Build the 3D descriptors calculators, requires Eigen3 to be installed" ON)
 if(NOT MSVC)
   if(RDK_OPTIMIZE_NATIVE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
   endif()
 endif()
 
-
 if(RDK_BUILD_SWIG_WRAPPERS!=ON)
   set(RDK_BUILD_SWIG_JAVA_WRAPPER OFF)
   set(RDK_BUILD_SWIG_CSHARP_WRAPPER OFF)
+endif()
+
+if(RDK_PGSQL_STATIC AND RDK_BUILD_PGSQL)
+  if(NOT RDK_INSTALL_STATIC_LIBS)
+    message("Enabling RDK_INSTALL_STATIC_LIBS because RDK_PGSQL_STATIC is set.")
+    set(RDK_INSTALL_STATIC_LIBS ON CACHE BOOL "install the rdkit static libraries" FORCE)
+  endif(NOT RDK_INSTALL_STATIC_LIBS)
 endif()
 
 include(TestBigEndian)
@@ -64,7 +70,7 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 
 #-------
 # Config variables:
-set(RDKit_Year "2016")
+set(RDKit_Year "2017")
 set(RDKit_Month "09")
 set(RDKit_Revision "1.dev1")
 set(RDKit_ABI "1")
@@ -93,6 +99,10 @@ else()
   ADD_DEFINITIONS("-DRDK_64BIT_BUILD")
 endif()
 
+if(MINGW)
+  ADD_DEFINITIONS("-DBOOST_SYSTEM_NO_DEPRECATED")
+endif(MINGW)
+
 # defines macros: rdkit_python_extension, rdkit_test
 include(RDKitUtils)
 install(EXPORT ${RDKit_EXPORTED_TARGETS} DESTINATION ${RDKit_LibDir})
@@ -116,6 +126,10 @@ if(MSVC)
   SET(Boost_ADDITIONAL_VERSIONS "1.48" "1.48.0" "1.45" "1.45.0" "1.44" "1.44.0" "1.43" "1.43.0" "1.42" "1.42.0" "1.41" "1.41.0" "1.40" "1.40.0")
   ADD_DEFINITIONS("-DBOOST_ALL_NO_LIB")
 endif(MSVC)
+
+if(RDK_BUILD_INCHI_SUPPORT)
+  find_package(Inchi)
+endif(RDK_BUILD_INCHI_SUPPORT)
 
 if(RDK_BUILD_PYTHON_WRAPPERS)
   #-------
@@ -213,7 +227,7 @@ if(APPLE)
   endif()
 endif(APPLE)
 
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
 include_directories(${RDKit_CodeDir})
@@ -222,6 +236,18 @@ include_directories(${RDKit_CodeDir})
 # Detect clang, which masquerades as gcc.  CMake 2.6 doesn't know how to
 # detect it.
 string(REGEX MATCH "clang" CMAKE_COMPILER_IS_CLANG "${CMAKE_C_COMPILER}")
+
+if(RDK_BUILD_DESCRIPTORS3D)
+  find_package(Eigen3)
+  if(EIGEN3_FOUND)
+    ADD_DEFINITIONS("-DRDK_HAS_EIGEN3" "-DRDK_BUILD_DESCRIPTORS3D")
+    include_directories(${EIGEN3_INCLUDE_DIR})
+  else(EIGEN3_FOUND)
+    message("Eigen3 not found, disabling the Descriptors3D build.")
+    set(RDK_BUILD_DESCRIPTORS3D OFF)
+  endif(EIGEN3_FOUND)
+endif(RDK_BUILD_DESCRIPTORS3D)
+
 
 find_package (Threads)
 if(RDK_BUILD_THREADSAFE_SSS)
@@ -292,7 +318,7 @@ else(RDK_TEST_COVERAGE)
  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    # We don't on C_FLAGS warnings to keep Avalon compiling quiet
    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -fPIC")
-   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -fPIC -Wall -Wextra")
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -fPIC")
  endif()
 endif(RDK_TEST_COVERAGE)
 

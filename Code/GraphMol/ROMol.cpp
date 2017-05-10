@@ -43,12 +43,14 @@ void ROMol::destroy() {
 
 ROMol::ROMol(const std::string &pickle) : RDProps() {
   initMol();
+  numBonds = 0;
   MolPickler::molFromPickle(pickle, *this);
+  numBonds = rdcast<unsigned int>(boost::num_edges(d_graph));
 }
 
 void ROMol::initFromOther(const ROMol &other, bool quickCopy, int confId) {
   if (this == &other) return;
-
+  numBonds = 0;
   // std::cerr<<"    init from other: "<<this<<" "<<&other<<std::endl;
   // copy over the atoms
   const MolGraph &oGraph = other.d_graph;
@@ -98,7 +100,7 @@ void ROMol::initFromOther(const ROMol &other, bool quickCopy, int confId) {
   } else {
     dp_props.reset();
     STR_VECT computed;
-    dp_props.setVal(detail::computedPropName, computed);
+    dp_props.setVal(RDKit::detail::computedPropName, computed);
   }
   // std::cerr<<"---------    done init from other: "<<this<<"
   // "<<&other<<std::endl;
@@ -107,14 +109,14 @@ void ROMol::initFromOther(const ROMol &other, bool quickCopy, int confId) {
 void ROMol::initMol() {
   dp_props.reset();
   dp_ringInfo = new RingInfo();
-  // ok every molecule contains a property entry called detail::computedPropName
+  // ok every molecule contains a property entry called RDKit::detail::computedPropName
   // which provides
   //  list of property keys that correspond to value that have been computed
   // this can used to blow out all computed properties while leaving the rest
   // along
   // initialize this list to an empty vector of strings
   STR_VECT computed;
-  dp_props.setVal(detail::computedPropName, computed);
+  dp_props.setVal(RDKit::detail::computedPropName, computed);
 }
 
 unsigned int ROMol::getAtomDegree(const Atom *at) const {
@@ -360,9 +362,10 @@ unsigned int ROMol::addBond(Bond *bond_pin, bool takeOwnership) {
                                           bond_p->getEndAtomIdx(), d_graph);
   CHECK_INVARIANT(ok, "bond could not be added");
   d_graph[which].reset(bond_p);
-  int res = rdcast<int>(boost::num_edges(d_graph));
-  bond_p->setIdx(res - 1);
-  return res;
+  numBonds++;
+  //  int res = rdcast<int>(boost::num_edges(d_graph));
+  bond_p->setIdx(numBonds - 1);
+  return numBonds;//res;
 }
 unsigned int ROMol::addBond(Bond::BOND_SPTR bsp) { return addBond(bsp.get()); }
 

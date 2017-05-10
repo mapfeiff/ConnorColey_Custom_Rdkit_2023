@@ -29,6 +29,31 @@ struct Foo {
   ~Foo() { std::cerr << "deleted!" << std::endl; }
 };
 
+void testGithub940() {
+  BOOST_LOG(rdErrorLog)
+      << "Testing Github940: property dictionaries leaking memory" << std::endl;
+
+  // a couple small tests to check for memory leaks. Only useful with valgrind
+  {  // tests computed props
+    STR_VECT computed;
+    Dict *d = new Dict();
+    d->setVal(RDKit::detail::computedPropName, computed);
+    computed.push_back("foo");
+    d->setVal(RDKit::detail::computedPropName, computed);
+    delete d;
+  }
+  {  // tests computed props
+    STR_VECT computed;
+    Dict *d = new Dict();
+    d->setVal(RDKit::detail::computedPropName, computed);
+    computed.push_back("foo");
+    d->setVal(RDKit::detail::computedPropName, computed);
+    d->clearVal(RDKit::detail::computedPropName);
+    delete d;
+  }
+  BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
+}
+
 void testRDAny() {
   std::cerr << "Testing RDValue" << std::endl;
   {
@@ -85,13 +110,13 @@ void testRDAny() {
   { // tests computed props
     STR_VECT computed;
     Dict d;
-    d.setVal(detail::computedPropName, computed);
+    d.setVal(RDKit::detail::computedPropName, computed);
     computed.push_back("foo");
-    d.setVal(detail::computedPropName, computed);
-    STR_VECT computed2 = d.getVal<STR_VECT>(detail::computedPropName);
+    d.setVal(RDKit::detail::computedPropName, computed);
+    STR_VECT computed2 = d.getVal<STR_VECT>(RDKit::detail::computedPropName);
     TEST_ASSERT(computed2[0] == "foo");
     Dict d2(d);
-    computed2 = d2.getVal<STR_VECT>(detail::computedPropName);
+    computed2 = d2.getVal<STR_VECT>(RDKit::detail::computedPropName);
     TEST_ASSERT(computed2[0] == "foo");
   }
   
@@ -546,6 +571,8 @@ void testConstReturns() {
 
 int main() {
   RDLog::InitLogs();
+  testGithub940();
+  testRDAny();
     testRDAny();
 
 #if 1

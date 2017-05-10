@@ -66,14 +66,17 @@
 #include <vector>
 #include <stack>
 #include <set>
+#include <queue>
 #include "inchi.h"
-#include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <algorithm>
 
+#include <RDGeneral/BoostStartInclude.h>
+#include <boost/foreach.hpp>
+#include <boost/tuple/tuple.hpp>
 #if RDK_TEST_MULTITHREADED
 #include <boost/thread.hpp>
 #endif
+#include <RDGeneral/BoostEndInclude.h>
 
 namespace RDKit {
 namespace {
@@ -1856,11 +1859,11 @@ std::string MolToInchi(const ROMol& mol, ExtraInchiReturnValues& rv,
     // single bond in the big ring will get E/Z assigned as well. Though rdkit
     // will eventually remove it, I added it any way
     if (  // bondType == Bond::DOUBLE and
-        (bond->getStereo() == Bond::STEREOZ ||
-         bond->getStereo() == Bond::STEREOE) &&
+        bond->getStereo() > Bond::STEREOANY &&
         bond->getStereoAtoms().size() >= 2) {
       inchi_Stereo0D stereo0D;
-      if (bond->getStereo() == Bond::STEREOZ)
+      if (bond->getStereo() == Bond::STEREOZ ||
+          bond->getStereo() == Bond::STEREOCIS)
         stereo0D.parity = INCHI_PARITY_ODD;
       else
         stereo0D.parity = INCHI_PARITY_EVEN;
