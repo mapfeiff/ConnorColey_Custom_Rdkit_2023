@@ -1,3 +1,14 @@
+# Customized Built of RDKit taken from Connor Coley
+ * Slightly modified to enable easier installing on Google Colab 
+ * Documentated commands to make installing library a bit easier
+
+# How to install in Google Colab environment (Working as of 4 October 2023)
+ * First, clone this repository via the command: !git clone https://github.com/mapfeiff/ConnorColey_Custom_Rdkit_2023.git
+ * Next, run the shell script to install all required libraries: !./ConnorColey_Custom_Rdkit_2023/install_rdkit
+
+---
+---
+
 # RDKit
 [![Build status](https://travis-ci.org/rdkit/rdkit.svg)](https://travis-ci.org/rdkit/rdkit)
 [![Documentation Status](https://readthedocs.org/projects/rdkit/badge/?version=latest)](http://rdkit.readthedocs.org/en/latest/)
