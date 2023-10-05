@@ -18,7 +18,8 @@
 #include <sstream>
 #include <iostream>
 #include <boost/cstdint.hpp>
-#include <boost/detail/endian.hpp>
+// #include <boost/detail/endian.hpp> ---DEPRICATED---
+#include <boost/predef.h>
 
 namespace RDKit {
 // this code block for handling endian problems is from :
@@ -26,9 +27,9 @@ namespace RDKit {
 enum EEndian {
   LITTLE_ENDIAN_ORDER,
   BIG_ENDIAN_ORDER,
-#if defined(BOOST_LITTLE_ENDIAN)
+#if defined(BOOST_ENDIAN_LITTLE_BYTE)
   HOST_ENDIAN_ORDER = LITTLE_ENDIAN_ORDER
-#elif defined(BOOST_BIG_ENDIAN)
+#elif defined(BOOST_ENDIAN_BIG_BYTE)
   HOST_ENDIAN_ORDER = BIG_ENDIAN_ORDER
 #else
 #error "Failed to determine the system endian value"
