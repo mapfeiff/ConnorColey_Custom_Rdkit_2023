@@ -19,7 +19,7 @@ conda install -y boost-cpp boost py-boost
 conda install -y numpy
 conda install -y gxx_linux-64
 
-cd rdkit
+cd ConnorColey_Custom_Rdkit_2023
 mkdir build
 
 ANACONDA_HOME := /data/software/miniconda3
