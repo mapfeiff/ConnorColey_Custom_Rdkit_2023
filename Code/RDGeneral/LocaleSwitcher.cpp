@@ -33,7 +33,7 @@
 // LocaleSwitcher Dependencies
 #include <clocale>
 #ifndef _WIN32
-#include <xlocale.h>
+// #include <xlocale.h> --DEPRICATED--
 #include <string>
 #else
 #include <locale.h>
