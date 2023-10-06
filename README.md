@@ -3,8 +3,10 @@
  * Documentated commands to make installing library a bit easier
 
 # How to install in Google Colab environment (Working as of 4 October 2023)
- * First, clone this repository via the command: !git clone https://github.com/mapfeiff/ConnorColey_Custom_Rdkit_2023.git
- * Next, run the shell script to install all required libraries: !./ConnorColey_Custom_Rdkit_2023/install_rdkit
+ * Input the following commands into a Google Colab cell and execute it:
+ * !git clone https://github.com/mapfeiff/ConnorColey_Custom_Rdkit_2023.git
+ * !chmod +x ./ConnorColey_Custom_Rdkit_2023/install_rdkit
+ * !./ConnorColey_Custom_Rdkit_2023/install_rdkit
 
 ---
 ---
