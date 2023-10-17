@@ -28,19 +28,24 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#if defined(__CYGWIN__) && !defined(_GNU_SOURCE)
+// -std=c++11 turns off recent POSIX features!
+#define _GNU_SOURCE
+#endif
+
 #include "LocaleSwitcher.h"
+#include <string>
 
 // LocaleSwitcher Dependencies
 #include <clocale>
-#ifndef _WIN32
-// #include <xlocale.h> --DEPRICATED--
-#include <string>
-#else
+#ifdef __APPLE__
+#include <xlocale.h>
+#endif
+#ifdef __CYGWIN__
 #include <locale.h>
 #endif
-
-#ifdef RDK_THREADSAFE_SSS
-#include <boost/thread/tss.hpp>
+#ifdef RDK_BUILD_THREADSAFE_SSS
+#include <thread>
 #endif
 
 namespace RDKit {
