@@ -39,6 +39,6 @@ cmake -DPy_ENABLE_SHARED=1 \
   -DBOOST_ROOT="$CONDA_PREFIX"
 
 make
-make install
+make install/local
 
 cd ..
