@@ -11,11 +11,11 @@ source /usr/local/etc/profile.d/conda.sh
 conda init
 conda install -n root _license -y -q
 
-conda create --name rdkit_env python=3.7 -y
-source activate rdkit_env
+conda install python=3.7 -y
 
 conda install -y cmake cairo pillow eigen pkg-config
 conda install -y boost-cpp boost py-boost
+conda install -c anaconda -y libboost
 conda install -y numpy
 conda install -y gxx_linux-64
 
