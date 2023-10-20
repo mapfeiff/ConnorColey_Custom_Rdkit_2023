@@ -1,9 +1,9 @@
-# Customized Built of RDKit taken from Connor Coley
+# Customized Build of RDKit taken from Connor Coley
  * Slightly modified to enable easier installing on Google Colab 
  * Documentated commands to make installing library a bit easier
 
 # How to install in Google Colab environment (NOT Working as of 17 October 2023)
- * Input the following commands into a Google Colab cell and execute it:
+ Input the following commands into a Google Colab cell and execute it:
  * !git clone https://github.com/mapfeiff/ConnorColey_Custom_Rdkit_2023.git
  * !chmod +x ./ConnorColey_Custom_Rdkit_2023/install_rdkit
  * !./ConnorColey_Custom_Rdkit_2023/install_rdkit
