@@ -1,5 +1,7 @@
 # !/bin/bash
 
+# Modified from https://www.rdkit.org/docs/Install.html
+## Section Referencing: How to build from source with Conda/Linux x86_64: Python 3 environment
 wget -c https://repo.continuum.io/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.sh
 chmod +x Miniconda3-py37_4.8.3-Linux-x86_64.sh
 bash ./Miniconda3-py37_4.8.3-Linux-x86_64.sh -y -b -f -p /usr/local
