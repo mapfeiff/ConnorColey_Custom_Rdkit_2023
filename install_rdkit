@@ -42,3 +42,5 @@ cmake -DPy_ENABLE_SHARED=1 \
 
 make
 make install/local
+
+cd ..

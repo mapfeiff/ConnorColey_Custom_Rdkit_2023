@@ -7,6 +7,8 @@
  * !git clone https://github.com/mapfeiff/ConnorColey_Custom_Rdkit_2023.git
  * !chmod +x ./ConnorColey_Custom_Rdkit_2023/install_rdkit
  * !./ConnorColey_Custom_Rdkit_2023/install_rdkit
+ * %cd ConnorColey_Custom_Rdkit_2023
+ * import rdkit
 
 ---
 ---
